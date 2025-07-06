@@ -7,7 +7,10 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeFileUpload();
     initializeStatistics();
     initializeHistory();
-    loadSampleData();
+    initializeAPIButtons();
+    initializeExportImport();
+    initializeWinningCheck();
+    loadDataFromStorage();
 });
 
 function initializeNavigation() {
@@ -320,6 +323,24 @@ function updateStatistics() {
     }
 }
 
+function loadDataFromStorage() {
+    const stored = localStorage.getItem('lotteryData');
+    if (stored) {
+        try {
+            lotteryData = JSON.parse(stored);
+            lotteryAnalysis.data = lotteryData;
+            updateHistoryTable();
+            updateStatistics();
+            updateDataInfo();
+        } catch (e) {
+            console.error('Error loading stored data:', e);
+            loadSampleData();
+        }
+    } else {
+        loadSampleData();
+    }
+}
+
 function loadSampleData() {
     const sampleCSV = `date,first_prize,3digit_prefix,3digit_suffix,2digit
 2024-12-16,123456,123 456,789 012,34
@@ -334,6 +355,222 @@ function loadSampleData() {
 2024-08-01,012345,012 345,678 901,23`;
 
     lotteryData = lotteryAnalysis.parseCSVData(sampleCSV);
+    saveDataToStorage();
     updateHistoryTable();
     updateStatistics();
+    updateDataInfo();
+}
+
+function saveDataToStorage() {
+    try {
+        localStorage.setItem('lotteryData', JSON.stringify(lotteryData));
+        localStorage.setItem('lastUpdate', new Date().toISOString());
+    } catch (e) {
+        console.error('Error saving to storage:', e);
+    }
+}
+
+function updateDataInfo() {
+    const dataInfoDiv = document.getElementById('dataInfo');
+    if (dataInfoDiv && lotteryData.length > 0) {
+        const lastUpdate = localStorage.getItem('lastUpdate');
+        const lastDate = lotteryData[0].date || lotteryData[0]['วันที่'];
+        dataInfoDiv.innerHTML = `
+            <p>📊 ข้อมูลทั้งหมด: ${lotteryData.length} รายการ</p>
+            <p>📅 ข้อมูลล่าสุด: ${lastDate}</p>
+            ${lastUpdate ? `<p>🔄 อัปเดตล่าสุด: ${new Date(lastUpdate).toLocaleString('th-TH')}</p>` : ''}
+        `;
+    }
+}
+
+function initializeAPIButtons() {
+    const fetchLatestBtn = document.getElementById('fetchLatestBtn');
+    const fetchHistoryBtn = document.getElementById('fetchHistoryBtn');
+
+    if (fetchLatestBtn) {
+        fetchLatestBtn.addEventListener('click', async () => {
+            const result = await lotteryAPI.fetchLatestResult();
+            if (result) {
+                // Convert API result to our data format
+                const newData = {
+                    date: result.date,
+                    first_prize: result.results.firstPrize,
+                    '3digit_prefix': result.results.threedigitPrefix.join(' '),
+                    '3digit_suffix': result.results.threedigitSuffix.join(' '),
+                    '2digit': result.results.twodigit
+                };
+                
+                // Add to beginning of array if not exists
+                const exists = lotteryData.find(d => d.date === newData.date);
+                if (!exists) {
+                    lotteryData.unshift(newData);
+                    lotteryAnalysis.data = lotteryData;
+                    saveDataToStorage();
+                    updateHistoryTable();
+                    updateStatistics();
+                    updateDataInfo();
+                    showSuccess('ดึงข้อมูลล่าสุดสำเร็จ!');
+                } else {
+                    showError('ข้อมูลนี้มีอยู่แล้ว');
+                }
+            }
+        });
+    }
+
+    if (fetchHistoryBtn) {
+        fetchHistoryBtn.addEventListener('click', async () => {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() - 6); // 6 months ago
+            
+            const history = await lotteryAPI.fetchHistoricalData(
+                startDate.toISOString().split('T')[0],
+                endDate.toISOString().split('T')[0]
+            );
+            
+            if (history && history.length > 0) {
+                // Merge with existing data
+                const merged = mergeData(lotteryData, history);
+                lotteryData = merged;
+                lotteryAnalysis.data = lotteryData;
+                saveDataToStorage();
+                updateHistoryTable();
+                updateStatistics();
+                updateDataInfo();
+                showSuccess(`ดึงข้อมูลย้อนหลัง ${history.length} รายการสำเร็จ!`);
+            }
+        });
+    }
+}
+
+function mergeData(existing, newData) {
+    const merged = [...existing];
+    
+    newData.forEach(item => {
+        const index = merged.findIndex(e => e.date === item.date);
+        if (index === -1) {
+            merged.push(item);
+        }
+    });
+    
+    return merged.sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+function initializeExportImport() {
+    const exportBtn = document.getElementById('exportBtn');
+    
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            exportToExcel();
+        });
+    }
+}
+
+function exportToExcel() {
+    if (lotteryData.length === 0) {
+        showError('ไม่มีข้อมูลให้ส่งออก');
+        return;
+    }
+
+    // Create CSV content
+    const headers = ['วันที่', 'รางวัลที่ 1', 'เลขหน้า 3 ตัว', 'เลขท้าย 3 ตัว', 'เลขท้าย 2 ตัว'];
+    const csvContent = [
+        headers.join(','),
+        ...lotteryData.map(row => [
+            row.date || row['วันที่'] || '',
+            row.first_prize || row['รางวัลที่1'] || '',
+            row['3digit_prefix'] || row['เลขหน้า3ตัว'] || '',
+            row['3digit_suffix'] || row['เลขท้าย3ตัว'] || '',
+            row['2digit'] || row['เลขท้าย2ตัว'] || ''
+        ].join(','))
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `lottery_data_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showSuccess('ส่งออกข้อมูลสำเร็จ!');
+}
+
+function initializeWinningCheck() {
+    const checkWinningBtn = document.getElementById('checkWinningBtn');
+    const modal = document.getElementById('winningCheckModal');
+    const closeBtn = modal?.querySelector('.close');
+    const doCheckBtn = document.getElementById('doCheckBtn');
+
+    if (checkWinningBtn && modal) {
+        checkWinningBtn.addEventListener('click', () => {
+            modal.style.display = 'block';
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
+
+    if (doCheckBtn) {
+        doCheckBtn.addEventListener('click', async () => {
+            const date = document.getElementById('checkDate').value;
+            const numbersText = document.getElementById('checkNumbers').value;
+            
+            if (!date || !numbersText) {
+                showError('กรุณากรอกข้อมูลให้ครบ');
+                return;
+            }
+
+            const numbers = numbersText.split(',').map(n => n.trim()).filter(n => n);
+            const results = await lotteryAPI.checkWinning(numbers, date);
+            
+            if (results) {
+                displayWinningResults(results);
+            }
+        });
+    }
+
+    // Close modal when clicking outside
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
+
+function displayWinningResults(results) {
+    const resultsDiv = document.getElementById('checkResults');
+    if (!resultsDiv) return;
+
+    let totalWin = 0;
+    let html = `<h4>ผลการตรวจรางวัล วันที่ ${results.date}</h4>`;
+    
+    html += '<table class="check-results-table"><thead><tr><th>เลข</th><th>รางวัล</th><th>จำนวนเงิน</th></tr></thead><tbody>';
+    
+    results.checks.forEach(check => {
+        if (check.isWinner) {
+            totalWin += check.amount;
+            html += `<tr class="winner"><td>${check.number}</td><td>${check.prize}</td><td>${check.amount.toLocaleString()} บาท</td></tr>`;
+        } else {
+            html += `<tr><td>${check.number}</td><td>ไม่ถูกรางวัล</td><td>-</td></tr>`;
+        }
+    });
+    
+    html += '</tbody></table>';
+    
+    if (totalWin > 0) {
+        html += `<div class="total-win">🎉 ยินดีด้วย! คุณถูกรางวัลรวม ${totalWin.toLocaleString()} บาท</div>`;
+    } else {
+        html += '<div class="no-win">ไม่ถูกรางวัล ลองใหม่นะครับ 💪</div>';
+    }
+    
+    resultsDiv.innerHTML = html;
 }

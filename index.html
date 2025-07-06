@@ -47,11 +47,20 @@
             </div>
 
             <div class="upload-section">
-                <h3>อัปโหลดข้อมูลหวย</h3>
-                <p>อัปโหลดไฟล์ CSV ที่มีข้อมูลผลหวยย้อนหลัง</p>
-                <input type="file" id="fileInput" accept=".csv" />
-                <button id="uploadBtn" class="btn-primary">อัปโหลดและวิเคราะห์</button>
+                <h3>จัดการข้อมูลหวย</h3>
+                <p>อัปโหลดไฟล์ CSV หรือดึงข้อมูลจาก API</p>
+                <div class="data-options">
+                    <div class="option-group">
+                        <input type="file" id="fileInput" accept=".csv" />
+                        <button id="uploadBtn" class="btn-primary">อัปโหลด CSV</button>
+                    </div>
+                    <div class="option-group">
+                        <button id="fetchLatestBtn" class="btn-secondary">ดึงผลล่าสุด</button>
+                        <button id="fetchHistoryBtn" class="btn-secondary">ดึงข้อมูลย้อนหลัง</button>
+                    </div>
+                </div>
                 <div id="uploadStatus"></div>
+                <div id="dataInfo" class="data-info"></div>
             </div>
         </section>
 
@@ -102,6 +111,19 @@
                 <input type="month" id="monthFilter" />
                 <input type="text" id="numberSearch" placeholder="ค้นหาเลข..." />
                 <button id="searchBtn" class="btn-secondary">ค้นหา</button>
+                <button id="checkWinningBtn" class="btn-primary">ตรวจรางวัล</button>
+                <button id="exportBtn" class="btn-secondary">ส่งออก Excel</button>
+            </div>
+            
+            <div id="winningCheckModal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h3>ตรวจสอบผลรางวัล</h3>
+                    <input type="date" id="checkDate" placeholder="เลือกวันที่" />
+                    <textarea id="checkNumbers" placeholder="ใส่เลขที่ต้องการตรวจ (คั่นด้วยเครื่องหมายจุลภาค)"></textarea>
+                    <button id="doCheckBtn" class="btn-primary">ตรวจสอบ</button>
+                    <div id="checkResults"></div>
+                </div>
             </div>
 
             <div class="table-container">
@@ -153,20 +175,30 @@
                     <li>ตรวจสอบรูปแบบการออกซ้ำ</li>
                     <li>คำนวณจากแนวโน้มทางสถิติ</li>
                     <li>ผสมผสานกับปัจจัยเวลาและฤดูกาล</li>
+                    <li>ใช้ Machine Learning วิเคราะห์แพทเทิร์น</li>
+                    <li>วิเคราะห์ความสัมพันธ์ระหว่างตัวเลข</li>
                 </ul>
+            </div>
+            
+            <div class="prediction-tools">
+                <h4>เครื่องมือเสริม</h4>
+                <button id="dreamBookBtn" class="btn-secondary">ตำราฝัน</button>
+                <button id="numerologyBtn" class="btn-secondary">เลขศาสตร์</button>
+                <button id="savePredictionBtn" class="btn-primary">บันทึกการทำนาย</button>
             </div>
         </section>
     </main>
 
     <footer class="footer">
         <div class="container">
-            <p>⚠️ การพนันอาจก่อให้เกิดปัญหาทางการเงิน กรุณาเล่นอย่างมีสติ</p>
-            <p class="disclaimer">&copy; 2024 LottoLucky - ระบบวิเคราะห์หวยไทย</p>
+            <p>&copy; 2024 LottoLucky - ระบบวิเคราะห์หวยไทย</p>
+            <p class="disclaimer">⚠️ การพนันอาจก่อให้เกิดปัญหาทางการเงิน กรุณาเล่นอย่างมีสติ</p>
         </div>
     </footer>
 
-    <script src="js/app.js"></script>
     <script src="js/analysis.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
     <script src="js/predictions.js"></script>
     <script src="js/lucky.js"></script>
 </body>

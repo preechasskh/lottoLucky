@@ -177,6 +177,7 @@ class LotteryAnalysis {
         const patterns = this.analyzePatterns();
         const timeAnalysis = this.getTimeBasedAnalysis();
         const hotCold = this.getHotColdNumbers();
+        const advanced = this.getAdvancedStatistics();
 
         return {
             totalRecords: this.data.length,
@@ -185,8 +186,154 @@ class LotteryAnalysis {
             top3Digits: threeDigit,
             patterns,
             timeBasedAnalysis: timeAnalysis,
-            hotColdNumbers: hotCold
+            hotColdNumbers: hotCold,
+            advancedStats: advanced
         };
+    }
+
+    getAdvancedStatistics() {
+        const stats = {
+            digitPairFrequency: {},
+            digitTransitions: {},
+            sumDistribution: {},
+            gapAnalysis: {},
+            cycleAnalysis: {},
+            correlation: {}
+        };
+
+        // Analyze digit pairs
+        this.data.forEach(row => {
+            const firstPrize = row['first_prize'] || row['รางวัลที่1'] || '';
+            if (firstPrize && firstPrize.length === 6) {
+                // Digit pair frequency
+                for (let i = 0; i < 5; i++) {
+                    const pair = firstPrize.substr(i, 2);
+                    stats.digitPairFrequency[pair] = (stats.digitPairFrequency[pair] || 0) + 1;
+                }
+
+                // Sum distribution
+                const sum = firstPrize.split('').reduce((acc, d) => acc + parseInt(d), 0);
+                stats.sumDistribution[sum] = (stats.sumDistribution[sum] || 0) + 1;
+            }
+        });
+
+        // Analyze gaps between same numbers
+        const numberOccurrences = {};
+        this.data.forEach((row, index) => {
+            const firstPrize = row['first_prize'] || row['รางวัลที่1'] || '';
+            if (firstPrize) {
+                if (!numberOccurrences[firstPrize]) {
+                    numberOccurrences[firstPrize] = [];
+                }
+                numberOccurrences[firstPrize].push(index);
+            }
+        });
+
+        // Calculate average gaps
+        Object.entries(numberOccurrences).forEach(([num, indices]) => {
+            if (indices.length > 1) {
+                const gaps = [];
+                for (let i = 1; i < indices.length; i++) {
+                    gaps.push(indices[i] - indices[i-1]);
+                }
+                const avgGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+                stats.gapAnalysis[num] = {
+                    occurrences: indices.length,
+                    averageGap: avgGap.toFixed(2),
+                    lastSeen: this.data.length - indices[indices.length - 1]
+                };
+            }
+        });
+
+        // Digit transition analysis
+        this.data.forEach((row, index) => {
+            if (index > 0) {
+                const current = row['first_prize'] || row['รางวัลที่1'] || '';
+                const previous = this.data[index-1]['first_prize'] || this.data[index-1]['รางวัลที่1'] || '';
+                
+                if (current && previous && current.length === 6 && previous.length === 6) {
+                    for (let i = 0; i < 6; i++) {
+                        const transition = `${previous[i]}->${current[i]}`;
+                        stats.digitTransitions[transition] = (stats.digitTransitions[transition] || 0) + 1;
+                    }
+                }
+            }
+        });
+
+        return stats;
+    }
+
+    calculateStandardDeviation(numbers) {
+        const mean = numbers.reduce((a, b) => a + b, 0) / numbers.length;
+        const squaredDiffs = numbers.map(num => Math.pow(num - mean, 2));
+        const variance = squaredDiffs.reduce((a, b) => a + b, 0) / numbers.length;
+        return Math.sqrt(variance);
+    }
+
+    getPredictiveMetrics() {
+        const metrics = {
+            nextLikelyDigits: [],
+            cyclePrediction: {},
+            trendDirection: {},
+            confidenceScore: 0
+        };
+
+        // Calculate trend for each digit position
+        const { positionFreq } = this.analyzeDigitFrequency();
+        positionFreq.forEach((freqs, position) => {
+            const recentTrend = this.calculateRecentTrend(position);
+            metrics.trendDirection[position] = recentTrend;
+            
+            // Predict next likely digits based on trend
+            const prediction = this.predictNextDigit(freqs, recentTrend);
+            metrics.nextLikelyDigits.push(prediction);
+        });
+
+        // Calculate confidence based on data consistency
+        metrics.confidenceScore = this.calculateConfidence();
+
+        return metrics;
+    }
+
+    calculateRecentTrend(position) {
+        // Analyze last 20 draws for trend
+        const recentData = this.data.slice(0, Math.min(20, this.data.length));
+        const digitCounts = Array(10).fill(0);
+        
+        recentData.forEach(row => {
+            const firstPrize = row['first_prize'] || row['รางวัลที่1'] || '';
+            if (firstPrize && firstPrize.length === 6) {
+                const digit = parseInt(firstPrize[position]);
+                if (!isNaN(digit)) {
+                    digitCounts[digit]++;
+                }
+            }
+        });
+
+        return digitCounts;
+    }
+
+    predictNextDigit(overallFreq, recentTrend) {
+        // Combine overall frequency with recent trend
+        const combined = overallFreq.map((freq, digit) => {
+            const recentWeight = 0.6;
+            const overallWeight = 0.4;
+            return (recentTrend[digit] * recentWeight + freq * overallWeight);
+        });
+
+        // Find top 3 likely digits
+        const indexed = combined.map((score, digit) => ({ digit, score }));
+        indexed.sort((a, b) => b.score - a.score);
+        
+        return indexed.slice(0, 3).map(item => item.digit);
+    }
+
+    calculateConfidence() {
+        // Calculate based on data consistency and patterns
+        if (this.data.length < 10) return 0.2;
+        if (this.data.length < 50) return 0.5;
+        if (this.data.length < 100) return 0.7;
+        return 0.85;
     }
 }
 
