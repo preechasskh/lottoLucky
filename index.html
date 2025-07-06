@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LottoLucky - ระบบวิเคราะห์หวยไทย</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">🎰 LottoLucky</h1>
+            <ul class="nav-links">
+                <li><a href="#home" class="active">หน้าหลัก</a></li>
+                <li><a href="#statistics">สถิติ</a></li>
+                <li><a href="#lucky">เลขมงคล</a></li>
+                <li><a href="#history">ประวัติ</a></li>
+                <li><a href="#predictions">ทำนาย</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <!-- Home Section -->
+        <section id="home" class="section active">
+            <h2>ยินดีต้อนรับสู่ LottoLucky</h2>
+            <p class="subtitle">ระบบวิเคราะห์และทำนายหวยไทยอัจฉริยะ</p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>📊 วิเคราะห์สถิติ</h3>
+                    <p>วิเคราะห์ความถี่และรูปแบบของเลขที่ออก</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔮 ทำนายอัจฉริยะ</h3>
+                    <p>ใช้อัลกอริทึมขั้นสูงในการทำนายเลขเด็ด</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🍀 เลขมงคล</h3>
+                    <p>คำนวณเลขมงคลส่วนบุคคลจากวันเกิดและชื่อ</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📈 ประวัติการออก</h3>
+                    <p>ดูประวัติการออกรางวัลย้อนหลัง</p>
+                </div>
+            </div>
+
+            <div class="upload-section">
+                <h3>อัปโหลดข้อมูลหวย</h3>
+                <p>อัปโหลดไฟล์ CSV ที่มีข้อมูลผลหวยย้อนหลัง</p>
+                <input type="file" id="fileInput" accept=".csv" />
+                <button id="uploadBtn" class="btn-primary">อัปโหลดและวิเคราะห์</button>
+                <div id="uploadStatus"></div>
+            </div>
+        </section>
+
+        <!-- Statistics Section -->
+        <section id="statistics" class="section">
+            <h2>สถิติการออกรางวัล</h2>
+            
+            <div class="stat-controls">
+                <button class="stat-btn active" data-type="digit">ความถี่ตัวเลข</button>
+                <button class="stat-btn" data-type="2digit">เลข 2 ตัว</button>
+                <button class="stat-btn" data-type="3digit">เลข 3 ตัว</button>
+                <button class="stat-btn" data-type="pattern">รูปแบบ</button>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="statsChart"></canvas>
+            </div>
+
+            <div id="statsDetails" class="stats-details"></div>
+        </section>
+
+        <!-- Lucky Numbers Section -->
+        <section id="lucky" class="section">
+            <h2>คำนวณเลขมงคลส่วนบุคคล</h2>
+            
+            <form id="luckyForm" class="lucky-form">
+                <div class="form-group">
+                    <label for="fullName">ชื่อ-นามสกุล:</label>
+                    <input type="text" id="fullName" required placeholder="กรอกชื่อ-นามสกุลของคุณ">
+                </div>
+                
+                <div class="form-group">
+                    <label for="birthDate">วันเกิด:</label>
+                    <input type="date" id="birthDate" required>
+                </div>
+                
+                <button type="submit" class="btn-primary">คำนวณเลขมงคล</button>
+            </form>
+
+            <div id="luckyResults" class="lucky-results"></div>
+        </section>
+
+        <!-- History Section -->
+        <section id="history" class="section">
+            <h2>ประวัติการออกรางวัล</h2>
+            
+            <div class="filter-controls">
+                <input type="month" id="monthFilter" />
+                <input type="text" id="numberSearch" placeholder="ค้นหาเลข..." />
+                <button id="searchBtn" class="btn-secondary">ค้นหา</button>
+            </div>
+
+            <div class="table-container">
+                <table id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>วันที่</th>
+                            <th>รางวัลที่ 1</th>
+                            <th>เลขหน้า 3 ตัว</th>
+                            <th>เลขท้าย 3 ตัว</th>
+                            <th>เลขท้าย 2 ตัว</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Predictions Section -->
+        <section id="predictions" class="section">
+            <h2>การทำนายเลขเด็ด</h2>
+            
+            <div class="prediction-controls">
+                <button id="generatePredictions" class="btn-primary">สร้างการทำนายใหม่</button>
+            </div>
+
+            <div id="predictionResults" class="prediction-results">
+                <div class="prediction-set">
+                    <h3>รางวัลที่ 1 (6 หลัก)</h3>
+                    <div id="firstPrizePredictions" class="number-grid"></div>
+                </div>
+                
+                <div class="prediction-set">
+                    <h3>เลข 3 ตัว</h3>
+                    <div id="threedigitPredictions" class="number-grid"></div>
+                </div>
+                
+                <div class="prediction-set">
+                    <h3>เลข 2 ตัว</h3>
+                    <div id="twodigitPredictions" class="number-grid"></div>
+                </div>
+            </div>
+
+            <div class="prediction-explanation">
+                <h4>วิธีการทำนาย</h4>
+                <ul>
+                    <li>วิเคราะห์ความถี่การออกของตัวเลขในแต่ละตำแหน่ง</li>
+                    <li>ตรวจสอบรูปแบบการออกซ้ำ</li>
+                    <li>คำนวณจากแนวโน้มทางสถิติ</li>
+                    <li>ผสมผสานกับปัจจัยเวลาและฤดูกาล</li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 LottoLucky - ระบบวิเคราะห์หวยไทย</p>
+            <p class="disclaimer">⚠️ การพนันอาจก่อให้เกิดปัญหาทางการเงิน กรุณาเล่นอย่างมีสติ</p>
+        </div>
+    </footer>
+
+    <script src="js/app.js"></script>
+    <script src="js/analysis.js"></script>
+    <script src="js/predictions.js"></script>
+    <script src="js/lucky.js"></script>
+</body>
+</html>
